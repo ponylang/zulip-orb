@@ -1,0 +1,103 @@
+description: >
+  Send a status alert at the end of a job based on success or failure.
+  Must be the last step in a job.
+
+parameters:
+  webhook:
+    type: string
+    default: ${ZULIP_WEBHOOK}
+    description: >
+      Enter either your Webhook value or use the CircleCI UI to add your
+      token under the 'ZULIP_WEBHOOK' env var
+
+  user:
+    type: string
+    default: ${ZULIP_USER}
+    description: >
+      Enter either your authorization information or use the CircleCI UI to
+      add your token under the 'ZULIP_USER' env var
+
+  stream:
+    type: string
+    default: "notifications"
+    description: >
+      Zulip stream to post notifications to. Defaults to 'notifications'.
+
+  topic:
+    type: string
+    default: "CircleCI Activity"
+    description: >
+      Topic to use for messages. Defaults to 'CircleCI Activity'.
+
+  fail_only:
+    type: boolean
+    default: false
+    description: >
+      If `true`, notifications successful jobs will not be sent
+
+steps:
+  - run:
+      name: Zulip - Setting Failure Condition
+      command: |
+        echo 'export ZULIP_BUILD_STATUS="fail"' >> $BASH_ENV
+      when: on_fail
+
+  - run:
+      name: Zulip - Setting Success Condition
+      command: |
+        echo 'export ZULIP_BUILD_STATUS="success"' >> $BASH_ENV
+      when: on_success
+
+  - run:
+      name: Zulip - Sending Status Alert
+      shell: /bin/bash
+      when: always
+      command: |
+        if [ -z "<< parameters.webhook >>" ]; then
+          echo "NO ZULIP_WEBHOOK SET"
+          echo "Please input your ZULIP_WEBHOOK value either in the settings for this project, or as a parameter for this orb."
+          exit 1
+        fi
+
+        if [ -z "<< parameters.user >>" ]; then
+          echo "NO ZULIP_USER SET"
+          echo "Please input your ZULIP_USER value either in the settings for this project, or as a parameter for this orb."
+          exit 1
+        fi
+
+        if [ "$ZULIP_BUILD_STATUS" = "success" ]; then
+          #Skip if fail_only
+          if [ << parameters.fail_only >> = true ]; then
+            echo "The job completed successfully"
+            echo '"fail_only" is set to "true". No Zulip Notification sent.'
+            exit 0
+          fi
+
+
+          CONTENT="
+          A $CIRCLE_PROJECT_REPONAME job succeeded.
+
+          Build URL: $CIRCLE_BUILD_URL
+          Job: $CIRCLE_JOB
+          Build Number: $CIRCLE_BUILD_NUM
+          Branch: $CIRCLE_BRANCH
+          Tag: $CIRCLE_TAG
+          "
+        else
+          CONTENT="
+          A $CIRCLE_PROJECT_REPONAME job failed.
+
+          Build URL: $CIRCLE_BUILD_URL
+          Job: $CIRCLE_JOB
+          Build Number: $CIRCLE_BUILD_NUM
+          Branch: $CIRCLE_BRANCH
+          Tag: $CIRCLE_TAG
+          "
+        fi
+
+        curl -X POST << parameters.webhook >> \
+          -u << parameters.user >> \
+          -d "type=stream" \
+          -d "to=<< parameters.stream >>" \
+          -d "topic=<< parameters.topic >>" \
+          -d "content=${CONTENT}"

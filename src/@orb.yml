@@ -1,0 +1,9 @@
+version: 2.1
+
+description: >
+  Easily integrate Zulip notifications into your CircleCI projects.
+  View this orb's source: https://github.com/ponylang/zulip-orb
+
+## Requirements ##
+## - Bash
+## - cURL
