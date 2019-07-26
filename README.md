@@ -18,7 +18,7 @@ Example config:
 version: 2.1
 
 orbs:
-  zulip: ponylang/zulip@x.y.z
+  zulip: ponylang/zulip@1.0.0
 
 jobs:
   build:
