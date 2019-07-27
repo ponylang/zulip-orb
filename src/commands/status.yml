@@ -35,6 +35,15 @@ parameters:
     description: >
       If `true`, notifications successful jobs will not be sent
 
+  silently_exit_if_no_envs:
+    type: boolean
+    default: true
+    description: >
+      If `true`, don't not fail the job if no webhook or user is set.
+      This allows you to use CircleCI environment variables for configuration and
+      not pass them to PRs from forked repositories. The end result of this setup,
+      would be to not report the status of PRs from forked repositories.
+
 steps:
   - run:
       name: Zulip - Setting Failure Condition
@@ -53,16 +62,22 @@ steps:
       shell: /bin/bash
       when: always
       command: |
+        if [ -z "<< parameters.silently_exit_if_no_envs >>" ]; then
+          ENV_EXIT=0
+        else
+          ENV_EXIT=1
+        fi
+
         if [ -z "<< parameters.webhook >>" ]; then
           echo "NO ZULIP_WEBHOOK SET"
           echo "Please input your ZULIP_WEBHOOK value either in the settings for this project, or as a parameter for this orb."
-          exit 1
+          exit ${ENV_EXIT}
         fi
 
         if [ -z "<< parameters.user >>" ]; then
           echo "NO ZULIP_USER SET"
           echo "Please input your ZULIP_USER value either in the settings for this project, or as a parameter for this orb."
-          exit 1
+          exit ${ENV_EXIT}
         fi
 
         if [ "$ZULIP_BUILD_STATUS" = "success" ]; then
