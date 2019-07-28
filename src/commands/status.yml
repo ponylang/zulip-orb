@@ -62,7 +62,7 @@ steps:
       shell: /bin/bash
       when: always
       command: |
-        if [ -z "<< parameters.silently_exit_if_no_envs >>" ]; then
+        if [ << parameters.silently_exit_if_no_envs >> == true ]; then
           ENV_EXIT=0
         else
           ENV_EXIT=1
